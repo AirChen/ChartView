@@ -1,23 +1,17 @@
-# ChartView
-Flexible char view
+//
+//  ViewController.m
+//  ChartView
+//
+//  Created by AirChen on 2020/8/18.
+//  Copyright © 2020 AirChen. All rights reserved.
+//
 
-## Features
-Chart view use for displaying data that related to date in a day.It is scolling smoothly, and animated.
+#import "ViewController.h"
+#import "ChartView.h"
 
-    1. used Core Animation.
-    2. the scroll gesture adopt from UIScrollView.
-    3. customed sliding inertial animation.
+@interface ViewController ()
 
-## SnapShot
-
-There are three types of charts to select:
-
-![](./shotsnap.png)
-
-## How to use
-
-Ex:
-```
+@end
 
 @implementation ViewController
 {
@@ -64,6 +58,5 @@ Ex:
     });
 }
 
-@end
 
-```
+@end
