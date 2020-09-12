@@ -148,12 +148,11 @@ static inline int getScrollBarIndex(UIScrollView *scrollView, BOOL isToday, BOOL
 - (void)reloadData:(int32_t *)etas beginTimestamp:(int64_t)beginT count:(int)count {
     //计算 beginIndex;
     int beginIndex = 0;
-    NSDate *beginDate = [NSDate dateWithTimeIntervalSince1970:beginT];
-    for (int i = 0; i < _dateTabs.count; i++) {
-        if ([beginDate isEqualToDate:_dateTabs[i]]) {
-            beginIndex = i;
-            break;
-        }
+    NSDate *beginDate = [NSDate dateWithTimeIntervalSince1970:beginT];    
+    if ([_dateTabs containsObject:beginDate]) {
+        beginIndex = (int)[_dateTabs indexOfObject:beginDate];
+    } else {
+        return;
     }
     
     //整理 eta
@@ -342,6 +341,17 @@ static inline CGFloat getRatioWithMaxNumber(NSInteger maxNumber, NSInteger minNu
                 [obj removeFromSuperlayer];
             }];
             [_mirrorLayers removeAllObjects];
+            
+            NSMutableArray *array = [NSMutableArray array];
+            [_scrollView.layer.sublayers enumerateObjectsUsingBlock:^(__kindof CALayer * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                if ([obj isMemberOfClass:[CATextLayer class]]) {
+                    [array addObject:obj];
+                }
+            }];
+            [array enumerateObjectsUsingBlock:^(CATextLayer *obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                [obj removeFromSuperlayer];
+            }];
+            [array removeAllObjects];
         }
     }
 
