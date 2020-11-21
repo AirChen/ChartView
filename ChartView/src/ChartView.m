@@ -32,8 +32,8 @@ static inline int getScrollBarIndex(UIScrollView *scrollView, BOOL isToday, BOOL
 
 @implementation BarItemLayer
 {
-    CAGradientLayer *_barItemLayer;
-    CATextLayer *_textLayer;
+    CAGradientLayer *_barEntityLayer;
+    CATextLayer *_numLayer;
     CATextLayer *_titleLayer;
 }
 
@@ -43,46 +43,46 @@ static inline int getScrollBarIndex(UIScrollView *scrollView, BOOL isToday, BOOL
     CGFloat thinBarWidth = (_enableThin && _colorType != BarItemLayerColorType_highLight) ? 12.0 : 8.0;
     UIColor *grayColor = [UIColor colorWithRed:217.0/255.0 green:217.0/255.0 blue:217.0/255.0 alpha:1];
     
-    if (!_textLayer) {
-        _textLayer = createTextLayer(10.0, grayColor);
-        _textLayer.wrapped = YES;
-        [self addSublayer:_textLayer];
+    if (!_numLayer) {
+        _numLayer = createTextLayer(10.0, grayColor);
+        _numLayer.wrapped = YES;
+        [self addSublayer:_numLayer];
     }
     
     if (_numStr) {
-        _textLayer.string = _numStr;
+        _numLayer.string = _numStr;
     }
     
     if (_numStr && _numStr.length > 4) {
-        _textLayer.frame = CGRectMake(0, -textHeight, CGRectGetWidth(rect), 2.0 * textHeight);
+        _numLayer.frame = CGRectMake(0, -textHeight, CGRectGetWidth(rect), 2.0 * textHeight);
     } else {
-        _textLayer.frame = CGRectMake(0, 0, CGRectGetWidth(rect), textHeight);
+        _numLayer.frame = CGRectMake(0, 0, CGRectGetWidth(rect), textHeight);
     }
     
-    if (!_barItemLayer) {
-        _barItemLayer = [CAGradientLayer layer];
-        _barItemLayer.type = kCAGradientLayerAxial;
-        _barItemLayer.startPoint = CGPointMake(0, 0);
-        _barItemLayer.endPoint = CGPointMake(0, 1);
-        [self addSublayer:_barItemLayer];
+    if (!_barEntityLayer) {
+        _barEntityLayer = [CAGradientLayer layer];
+        _barEntityLayer.type = kCAGradientLayerAxial;
+        _barEntityLayer.startPoint = CGPointMake(0, 0);
+        _barEntityLayer.endPoint = CGPointMake(0, 1);
+        [self addSublayer:_barEntityLayer];
     }
         
     if (_colorType == BarItemLayerColorType_invalid) {
-        _barItemLayer.colors = @[(__bridge id)grayColor.CGColor, (__bridge id)grayColor.CGColor];
+        _barEntityLayer.colors = @[(__bridge id)grayColor.CGColor, (__bridge id)grayColor.CGColor];
     }
     
     if (_colorType == BarItemLayerColorType_lowLight) {
-        _barItemLayer.colors = @[(__bridge id)colorWithHex(0xa1b9ff).CGColor, (__bridge id)colorWithHex(0xd4e5ff).CGColor];
+        _barEntityLayer.colors = @[(__bridge id)colorWithHex(0xa1b9ff).CGColor, (__bridge id)colorWithHex(0xd4e5ff).CGColor];
     }
     
     if (_colorType == BarItemLayerColorType_highLight) {
-        _barItemLayer.colors = @[(__bridge id)colorWithHex(0x6189ff).CGColor, (__bridge id)colorWithHex(0xb8d4ff).CGColor];
+        _barEntityLayer.colors = @[(__bridge id)colorWithHex(0x6189ff).CGColor, (__bridge id)colorWithHex(0xb8d4ff).CGColor];
     }
         
-    _barItemLayer.locations = @[@(0.0), @(1)];
-    _barItemLayer.frame = CGRectMake(thinBarWidth, textHeight, CGRectGetWidth(rect) - 2 * thinBarWidth, CGRectGetHeight(rect) - textHeight);
+    _barEntityLayer.locations = @[@(0.0), @(1)];
+    _barEntityLayer.frame = CGRectMake(thinBarWidth, textHeight, CGRectGetWidth(rect) - 2 * thinBarWidth, CGRectGetHeight(rect) - textHeight);
     if (_enableShape) {
-        _barItemLayer.mask = createShapeLayer(_barItemLayer.bounds);
+        _barEntityLayer.mask = createShapeLayer(_barEntityLayer.bounds);
     }
     
     if (_titleLayer) {
@@ -108,8 +108,8 @@ static inline int getScrollBarIndex(UIScrollView *scrollView, BOOL isToday, BOOL
     NSMutableArray<BarItemLayer *> *_mirrorLayers;
     NSMutableArray<NSDate *> *_dateTabs;
         
-    int32_t max_eta;
-    int32_t min_eta;
+    int32_t _max_eta;
+    int32_t _min_eta;
         
     CGFloat _barItemH;
     BOOL _isToday;
@@ -157,7 +157,8 @@ static inline int getScrollBarIndex(UIScrollView *scrollView, BOOL isToday, BOOL
     
     //整理 eta
     int currentIndex = getScrollBarIndex(_scrollView, _isToday, NO);
-    for (int i = 0; i < count && (beginIndex + i) < _barItemLayers.count; i++) {
+    int maxIdx = (int)_barItemLayers.count - beginIndex;
+    for (int i = 0; i < MIN(count, maxIdx); i++) {
         int32_t eta = *(etas + i);
         NSString *numStr = [self calcTimeFromSeconds:eta];
         
@@ -174,12 +175,12 @@ static inline int getScrollBarIndex(UIScrollView *scrollView, BOOL isToday, BOOL
             itemLayer.eta = eta;
         }
         
-        if (eta > max_eta) {
-            max_eta = eta;
+        if (eta > _max_eta) {
+            _max_eta = eta;
         }
         
-        if (eta < min_eta) {
-            min_eta = eta;
+        if (eta < _min_eta) {
+            _min_eta = eta;
         }
     }
 }
@@ -194,12 +195,12 @@ static inline CGFloat getRatioWithMaxNumber(NSInteger maxNumber, NSInteger minNu
 }
 
 - (void)recalculateBarItemLayersHeight {
-    if (max_eta == min_eta) {
-        max_eta++;
+    if (_max_eta == _min_eta) {
+        _max_eta++;
     }
     
-    CGFloat radio = getRatioWithMaxNumber(max_eta, min_eta);
-    CGFloat diffMaxMinIntegerValue = max_eta - min_eta * radio;
+    CGFloat radio = getRatioWithMaxNumber(_max_eta, _min_eta);
+    CGFloat diffMaxMinIntegerValue = _max_eta - _min_eta * radio;
     for (int i = 0; i < _barItemLayers.count; i++) {
         BarItemLayer *layer = _barItemLayers[i];
         BarItemLayer *mirrorLayer;
@@ -209,7 +210,7 @@ static inline CGFloat getRatioWithMaxNumber(NSInteger maxNumber, NSInteger minNu
         if (layer.colorType != BarItemLayerColorType_invalid) {
             CGRect(^calculateRect)(CGRect) = ^(CGRect rect) {
                 CGFloat barBottom = CGRectGetMinY(rect) + CGRectGetHeight(rect);
-                CGFloat process = (layer.eta - self->min_eta * radio)/diffMaxMinIntegerValue;
+                CGFloat process = (layer.eta - self->_min_eta * radio)/diffMaxMinIntegerValue;
                 CGFloat newHeight = (self->_barItemH * 0.8) * process + self->_barItemH * 0.2;
                 CGRect newFrame = CGRectMake(CGRectGetMinX(rect), barBottom - newHeight, CGRectGetWidth(rect), newHeight);
                 return newFrame;
@@ -232,8 +233,8 @@ static inline CGFloat getRatioWithMaxNumber(NSInteger maxNumber, NSInteger minNu
 }
 
 - (void)calculateDateTabs:(NSDate *)date {
-    max_eta = INT_MIN;
-    min_eta = INT_MAX;
+    _max_eta = INT_MIN;
+    _min_eta = INT_MAX;
   
     if (_dateTabs) {
         [_dateTabs removeAllObjects];
@@ -268,7 +269,7 @@ static inline CGFloat getRatioWithMaxNumber(NSInteger maxNumber, NSInteger minNu
     if (_isToday) {
         index -= 3;
     }
-    CGFloat calOffsetX = (CGFloat)index * CGRectGetWidth(self.scrollView.bounds);
+    CGFloat calOffsetX = (CGFloat)index * CGRectGetWidth(_scrollView.bounds);
     [_scrollView setContentOffset:CGPointMake(calOffsetX, 0) animated:YES];
 }
 
@@ -316,19 +317,20 @@ static inline CGFloat getRatioWithMaxNumber(NSInteger maxNumber, NSInteger minNu
     _barItemH = barHeight + 2.0 * spareHeight - 10;
         
     if (!_scrollView) {
+        self.scrollView;
         CGFloat mx = (CGRectGetWidth(rect) - barWidth - barInterval)/2.0;
         if (_type == ChartViewType_mask) {
-            self.scrollView.frame = CGRectMake(mx + CGRectGetMinX(self.frame), CGRectGetMinY(self.frame), barWidth + barInterval, CGRectGetHeight(rect));
-            self.scrollView.backgroundColor = [UIColor clearColor];
+            _scrollView.frame = CGRectMake(mx + CGRectGetMinX(self.frame), CGRectGetMinY(self.frame), barWidth + barInterval, CGRectGetHeight(rect));
+            _scrollView.backgroundColor = [UIColor clearColor];
         } else {
-            self.scrollView.frame = CGRectMake(mx + CGRectGetMinX(self.frame), barBottom + CGRectGetMinY(self.frame), barWidth + barInterval, 25.0);
-            self.scrollView.backgroundColor = [UIColor whiteColor];
+            _scrollView.frame = CGRectMake(mx + CGRectGetMinX(self.frame), barBottom + CGRectGetMinY(self.frame), barWidth + barInterval, 25.0);
+            _scrollView.backgroundColor = [UIColor whiteColor];
         }
         
         if (_type == ChartViewType_zoom) {
-            self.scrollView.layer.cornerRadius = CGRectGetHeight(_scrollView.bounds) / 2.0;
-            self.scrollView.layer.borderColor = colorWithHex(0xcccccc).CGColor;
-            self.scrollView.layer.borderWidth = 1.0f;
+            _scrollView.layer.cornerRadius = CGRectGetHeight(_scrollView.bounds) / 2.0;
+            _scrollView.layer.borderColor = colorWithHex(0xcccccc).CGColor;
+            _scrollView.layer.borderWidth = 1.0f;
         }
     } else {
         [_barItemLayers enumerateObjectsUsingBlock:^(BarItemLayer * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
